@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Фильтр для USB устройств (клавиатуры, мыши, геймпады) -->
+    <usb-device class="0x03" /> <!-- HID (Human Interface Device) -->
+</resources>
