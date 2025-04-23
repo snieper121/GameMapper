@@ -33,3 +33,19 @@
 -keep class com.example.gamemapper.GameProfile { *; }
 -keep class com.example.gamemapper.GestureMapping { *; }
 -keep class com.example.gamemapper.GestureType { *; }
+
+# Правила для Kotlin
+-keep class kotlin.** { *; }
+-keep class kotlin.Metadata { *; }
+-dontwarn kotlin.**
+-keepclassmembers class **$WhenMappings {
+    <fields>;
+}
+-keepclassmembers class kotlin.Metadata {
+    public <methods>;
+}
+
+# Правила для корутин
+-keepclassmembernames class kotlinx.** {
+    volatile <fields>;
+}
