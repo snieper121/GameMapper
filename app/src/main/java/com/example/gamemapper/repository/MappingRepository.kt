@@ -20,7 +20,14 @@ class MappingRepository(private val context: Context) : IMappingRepository {
     private val gestureMappings = mutableListOf<GestureMapping>()
     private val prefs: SharedPreferences = context.getSharedPreferences("MappingPrefs", Context.MODE_PRIVATE)
     private val gson = Gson()
-    private val errorHandler = AppModule.getErrorHandler()
+    private val errorHandler by lazy { 
+        try {
+            AppModule.getErrorHandler()
+        } catch (e: Exception) {
+            Log.e("MappingRepository", "Ошибка при получении ErrorHandler", e)
+            null
+        }
+    }
 
     companion object {
         private const val TAG = "MappingRepository"
@@ -42,7 +49,7 @@ class MappingRepository(private val context: Context) : IMappingRepository {
             keyMappings.putAll(mappings)
             saveMappings()
         } catch (e: Exception) {
-            errorHandler.handleError(e, "Не удалось обновить маппинги клавиш")
+            handleError(e, "Не удалось обновить маппинги клавиш")
         }
     }
 
@@ -51,7 +58,7 @@ class MappingRepository(private val context: Context) : IMappingRepository {
             keyMappings[keyCode] = Pair(x, y)
             saveMappings()
         } catch (e: Exception) {
-            errorHandler.handleError(e, "Не удалось добавить маппинг клавиши")
+            handleError(e, "Не удалось добавить маппинг клавиши")
         }
     }
 
@@ -60,7 +67,7 @@ class MappingRepository(private val context: Context) : IMappingRepository {
             keyMappings.remove(keyCode)
             saveMappings()
         } catch (e: Exception) {
-            errorHandler.handleError(e, "Не удалось удалить маппинг клавиши")
+            handleError(e, "Не удалось удалить маппинг клавиши")
         }
     }
 
@@ -78,7 +85,7 @@ class MappingRepository(private val context: Context) : IMappingRepository {
             }
             saveMappings()
         } catch (e: Exception) {
-            errorHandler.handleError(e, "Не удалось добавить маппинг жеста")
+            handleError(e, "Не удалось добавить маппинг жеста")
         }
     }
 
@@ -87,7 +94,7 @@ class MappingRepository(private val context: Context) : IMappingRepository {
             gestureMappings.removeIf { it.id == gestureId }
             saveMappings()
         } catch (e: Exception) {
-            errorHandler.handleError(e, "Не удалось удалить маппинг жеста")
+            handleError(e, "Не удалось удалить маппинг жеста")
         }
     }
 
@@ -104,7 +111,7 @@ class MappingRepository(private val context: Context) : IMappingRepository {
 
             Log.d(TAG, "Mappings saved successfully")
         } catch (e: Exception) {
-            errorHandler.logError(e, "Error saving mappings: ${e.message}")
+            handleError(e, "Error saving mappings")
         }
     }
 
@@ -129,7 +136,12 @@ class MappingRepository(private val context: Context) : IMappingRepository {
 
             Log.d(TAG, "Mappings loaded successfully")
         } catch (e: Exception) {
-            errorHandler.logError(e, "Error loading mappings: ${e.message}")
+            handleError(e, "Error loading mappings")
         }
+    }
+
+    private fun handleError(e: Exception, message: String) {
+        Log.e("MappingRepository", "$message: ${e.message}", e)
+        errorHandler?.handleError(e, message)
     }
 }

@@ -1,6 +1,7 @@
 package com.example.gamemapper.repository
 
 import android.content.Context
+import android.util.Log
 import com.example.gamemapper.GameProfile
 import com.example.gamemapper.PersistenceManager
 import com.example.gamemapper.di.AppModule
@@ -15,7 +16,14 @@ import java.util.UUID
 class ProfileRepository(private val context: Context) : IProfileRepository {
 
     private val profiles = mutableListOf<GameProfile>()
-    private val errorHandler = AppModule.getErrorHandler()
+    private val errorHandler by lazy { 
+        try {
+            AppModule.getErrorHandler()
+        } catch (e: Exception) {
+            Log.e("ProfileRepository", "Ошибка при получении ErrorHandler", e)
+            null
+        }
+    }
 
     init {
         // Загружаем профили при инициализации
@@ -27,8 +35,13 @@ class ProfileRepository(private val context: Context) : IProfileRepository {
             profiles.clear()
             profiles.addAll(PersistenceManager.loadProfiles())
         } catch (e: Exception) {
-            errorHandler.logError(e, "Error loading profiles")
+            handleError(e, "Error loading profiles")
         }
+    }
+
+    private fun handleError(e: Exception, message: String) {
+        Log.e("ProfileRepository", "$message: ${e.message}", e)
+        errorHandler?.handleError(e, message)
     }
 
     override fun getAllProfiles(): List<GameProfile> {
@@ -53,7 +66,7 @@ class ProfileRepository(private val context: Context) : IProfileRepository {
             }
             PersistenceManager.saveProfiles(profiles)
         } catch (e: Exception) {
-            errorHandler.handleError(e, "Не удалось сохранить профиль")
+            handleError(e, "Не удалось сохранить профиль")
             throw e
         }
     }
@@ -66,7 +79,7 @@ class ProfileRepository(private val context: Context) : IProfileRepository {
             }
             removed
         } catch (e: Exception) {
-            errorHandler.handleError(e, "Не удалось удалить профиль")
+            handleError(e, "Не удалось удалить профиль")
             false
         }
     }
@@ -81,7 +94,7 @@ class ProfileRepository(private val context: Context) : IProfileRepository {
             PersistenceManager.saveProfiles(profiles)
             return newProfile
         } catch (e: Exception) {
-            errorHandler.handleError(e, "Не удалось создать профиль")
+            handleError(e, "Не удалось создать профиль")
             throw e
         }
     }
@@ -101,7 +114,7 @@ class ProfileRepository(private val context: Context) : IProfileRepository {
             PersistenceManager.saveProfiles(profiles)
             return duplicatedProfile
         } catch (e: Exception) {
-            errorHandler.handleError(e, "Не удалось дублировать профиль")
+            handleError(e, "Не удалось дублировать профиль")
             return null
         }
     }
