@@ -2,19 +2,16 @@ package com.example.gamemapper
 
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
-import java.util.UUID
+import com.example.gamemapper.GestureType
 
 /**
- * Модель данных для маппинга жестов
+ * Класс, представляющий маппинг жеста на экране
  */
 @Parcelize
 data class GestureMapping(
-    val id: String = UUID.randomUUID().toString(),
-    val gestureType: GestureType,
-    val keyCode: Int,
-    val startX: Float,
-    val startY: Float,
-    val endX: Float,
-    val endY: Float,
-    val duration: Long
+    val id: String = java.util.UUID.randomUUID().toString(),
+    val type: GestureType = GestureType.TAP,
+    val x: Float = 0f,
+    val y: Float = 0f,
+    val keyCode: Int = 0
 ) : Parcelable

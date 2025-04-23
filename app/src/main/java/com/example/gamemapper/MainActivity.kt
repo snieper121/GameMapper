@@ -1,11 +1,16 @@
 package com.example.gamemapper
 
+import android.Manifest
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
+import android.content.pm.PackageManager
+import android.content.res.Configuration
+import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuItem
@@ -15,6 +20,8 @@ import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -26,6 +33,8 @@ import com.example.gamemapper.helpers.FeedbackHelper
 import com.example.gamemapper.helpers.PermissionHelper
 import com.example.gamemapper.viewmodel.ProfileViewModel
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import androidx.annotation.RequiresApi
+import android.widget.Toast
 
 class MainActivity : AppCompatActivity() {
 
@@ -33,63 +42,124 @@ class MainActivity : AppCompatActivity() {
     private lateinit var profileAdapter: ProfileAdapter
     private lateinit var profileList: RecyclerView
     private lateinit var emptyView: TextView
+    private lateinit var addProfileButton: FloatingActionButton
+    private lateinit var toggleServiceButton: Button
 
     private lateinit var permissionHelper: PermissionHelper
     private lateinit var feedbackHelper: FeedbackHelper
     private lateinit var externalDeviceDetector: ExternalDeviceDetector
+    
+    // Для сохранения состояния при повороте экрана
+    private var lastSelectedProfileId: String? = null
 
-    private var mappingService: MappingService? = null
-    private var bound = false
-
-    private val connection = object : ServiceConnection {
-        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-            val binder = service as MappingService.LocalBinder
-            mappingService = binder.getService()
-            bound = true
-
-            // Обновляем UI, если сервис подключен
-            updateServiceStatus()
-        }
-
-        override fun onServiceDisconnected(name: ComponentName?) {
-            mappingService = null
-            bound = false
-
-            // Обновляем UI, если сервис отключен
-            updateServiceStatus()
-        }
+    companion object {
+        private const val TAG = "MainActivity"
+        private const val KEY_SELECTED_PROFILE = "selected_profile"
+        private const val REQUEST_FOREGROUND_SERVICE_PERMISSION = 1001
+        private const val REQUEST_NOTIFICATION_PERMISSION = 1002
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // Инициализация зависимостей
-        permissionHelper = AppModule.getPermissionHelper()
-        feedbackHelper = AppModule.getFeedbackHelper()
-        externalDeviceDetector = AppModule.getExternalDeviceDetector()
+        // Восстанавливаем сохраненное состояние, если есть
+        if (savedInstanceState != null) {
+            lastSelectedProfileId = savedInstanceState.getString(KEY_SELECTED_PROFILE)
+            Log.d(TAG, getString(R.string.log_restored_state, lastSelectedProfileId ?: "null"))
+        }
 
-        // Инициализация ViewModel
-        profileViewModel = ViewModelProvider(
-            this,
-            AppModule.getProfileViewModelFactory()
-        ).get(ProfileViewModel::class.java)
+        try {
+            // Инициализация зависимостей
+            permissionHelper = AppModule.getPermissionHelper()
+            feedbackHelper = AppModule.getFeedbackHelper()
+            externalDeviceDetector = AppModule.getExternalDeviceDetector()
 
-        // Настройка UI
-        setupUI()
+            // Инициализация ViewModel с использованием by lazy для отложенной инициализации
+            profileViewModel = ViewModelProvider(
+                this,
+                AppModule.getProfileViewModelFactory()
+            )[ProfileViewModel::class.java]
 
-        // Настройка наблюдателей
-        setupObservers()
+            // Настройка UI
+            setupUI()
 
-        // Проверка доступа к сервису доступности
-        checkAccessibilityServiceEnabled()
+            // Настройка наблюдателей
+            setupObservers()
 
-        // Проверка подключения внешних устройств
-        checkExternalDevices()
+            // Проверка разрешений для Android 14+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                checkForegroundServicePermission()
+            }
 
-        // Привязка к сервису
-        val intent = Intent(this, MappingService::class.java)
-        bindService(intent, connection, Context.BIND_AUTO_CREATE)
+            // Проверка разрешения на уведомления для Android 13+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                checkNotificationPermission()
+            }
+
+            // Проверка доступа к сервису доступности
+            Log.d(TAG, "Проверка доступности сервиса...")
+            checkAccessibilityServiceEnabled()
+
+            // Проверка подключения внешних устройств
+            checkExternalDevices()
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Ошибка при инициализации MainActivity: ${e.message}", e)
+            Toast.makeText(this, "Произошла ошибка при запуске приложения", Toast.LENGTH_LONG).show()
+        }
+    }
+    
+    /**
+     * Проверяет разрешение на запуск foreground service в Android 14+
+     */
+    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    private fun checkForegroundServicePermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.FOREGROUND_SERVICE_DATA_SYNC) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.FOREGROUND_SERVICE_DATA_SYNC),
+                    REQUEST_FOREGROUND_SERVICE_PERMISSION
+                )
+            }
+        }
+    }
+
+    /**
+     * Проверяет разрешение на отправку уведомлений в Android 13+
+     */
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    private fun checkNotificationPermission() {
+        if (!permissionHelper.hasNotificationPermission()) {
+            // Показываем диалог с объяснением, зачем нужно разрешение
+            permissionHelper.showNotificationPermissionDialog(this)
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        when (requestCode) {
+            REQUEST_FOREGROUND_SERVICE_PERMISSION -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    // Разрешение получено
+                    feedbackHelper.showToast(getString(R.string.service_started))
+                } else {
+                    // Разрешение не получено, показываем сообщение
+                    feedbackHelper.showToast(getString(R.string.foreground_service_permission_required))
+                }
+            }
+            REQUEST_NOTIFICATION_PERMISSION -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    // Разрешение на уведомления получено
+                    feedbackHelper.showToast(getString(R.string.service_started))
+                }
+            }
+        }
     }
 
     override fun onStart() {
@@ -99,11 +169,42 @@ class MainActivity : AppCompatActivity() {
         profileViewModel.loadProfiles()
     }
 
+    override fun onResume() {
+        super.onResume()
+        
+        // Обновляем статус сервиса при возвращении к активности
+        updateServiceStatus()
+    }
+
     override fun onDestroy() {
         super.onDestroy()
-        if (bound) {
-            unbindService(connection)
-            bound = false
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        // Сохраняем текущее состояние
+        outState.putString(KEY_SELECTED_PROFILE, lastSelectedProfileId)
+        Log.d(TAG, getString(R.string.log_saved_state, lastSelectedProfileId ?: "null"))
+    }
+    
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        Log.d(TAG, getString(R.string.log_config_changed, newConfig.orientation))
+        
+        // Проверяем, не завершается ли активность
+        if (isFinishing) return
+        
+        try {
+            // Пересоздаем список при изменении конфигурации
+            setupUI()
+            
+            // Обновляем отображение профилей
+            profileViewModel.profiles.value?.let { updateProfileList(it) }
+            
+            // Обновляем статус сервиса
+            updateServiceStatus()
+        } catch (e: Exception) {
+            Log.e(TAG, getString(R.string.config_update_error, e.message), e)
         }
     }
 
@@ -131,11 +232,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupUI() {
-        // Настройка RecyclerView
+    // Настройка RecyclerView
         profileList = findViewById(R.id.profileList)
         profileList.layoutManager = LinearLayoutManager(this)
 
-        // Добавляем анимацию
+    // Добавляем анимацию
         val layoutAnimation = android.view.animation.LayoutAnimationController(
             android.view.animation.AnimationUtils.loadAnimation(this, R.anim.item_animation_fall_down)
         )
@@ -153,17 +254,17 @@ class MainActivity : AppCompatActivity() {
         }
         profileList.adapter = profileAdapter
 
-// Настройка пустого представления
+        // Настройка пустого представления
         emptyView = findViewById(R.id.emptyView)
 
         // Настройка FAB для добавления профиля
-        val addProfileButton = findViewById<FloatingActionButton>(R.id.addProfileButton)
+        addProfileButton = findViewById(R.id.addProfileButton)
         addProfileButton.setOnClickListener {
             showCreateProfileDialog()
         }
 
         // Настройка кнопки запуска/остановки сервиса
-        val toggleServiceButton = findViewById<Button>(R.id.toggleServiceButton)
+        toggleServiceButton = findViewById(R.id.toggleServiceButton)
         toggleServiceButton.setOnClickListener {
             toggleService()
         }
@@ -194,21 +295,29 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Обновляет UI при изменении списка профилей с использованием DiffUtil
+     * для эффективного обновления RecyclerView
+     */
     private fun updateProfileList(profiles: List<GameProfile>) {
-        val oldProfiles = profileAdapter.getProfiles()
-        val diffCallback = ProfileDiffCallback(oldProfiles, profiles)
-        val diffResult = DiffUtil.calculateDiff(diffCallback)
+        try {
+            val oldProfiles = profileAdapter.getProfiles()
+            val diffCallback = ProfileDiffCallback(oldProfiles, profiles)
+            val diffResult = DiffUtil.calculateDiff(diffCallback, true) // Используем detectMoves = true
 
-        profileAdapter.updateProfiles(profiles)
-        diffResult.dispatchUpdatesTo(profileAdapter)
+            profileAdapter.updateProfiles(profiles)
+            diffResult.dispatchUpdatesTo(profileAdapter)
 
-        // Показываем пустое представление, если нет профилей
-        if (profiles.isEmpty()) {
-            emptyView.visibility = View.VISIBLE
-            profileList.visibility = View.GONE
-        } else {
-            emptyView.visibility = View.GONE
-            profileList.visibility = View.VISIBLE
+            // Показываем пустое представление, если нет профилей
+            if (profiles.isEmpty()) {
+                emptyView.visibility = View.VISIBLE
+                profileList.visibility = View.GONE
+            } else {
+                emptyView.visibility = View.GONE
+                profileList.visibility = View.VISIBLE
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Ошибка при обновлении списка профилей: ${e.message}", e)
         }
     }
 
@@ -235,9 +344,12 @@ class MainActivity : AppCompatActivity() {
     private fun activateProfile(profile: GameProfile) {
         // Сохраняем ID активного профиля
         profileViewModel.activateProfile(profile.id)
+        
+        // Запоминаем ID выбранного профиля
+        lastSelectedProfileId = profile.id
 
-        // Если сервис запущен, загружаем профиль
-        if (bound && mappingService != null) {
+        // Проверяем, запущен ли сервис
+        if (permissionHelper.isAccessibilityServiceEnabled(MappingService::class.java.name)) {
             val intent = Intent(this, MappingService::class.java).apply {
                 action = "LOAD_PROFILE"
                 putExtra("profile_id", profile.id)
@@ -337,8 +449,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun toggleService() {
-        if (bound && mappingService != null &&
-            permissionHelper.isAccessibilityServiceEnabled(MappingService::class.java.name)) {
+        if (permissionHelper.isAccessibilityServiceEnabled(MappingService::class.java.name)) {
             // Если сервис запущен, останавливаем его
             val intent = Intent(this, MappingService::class.java).apply {
                 action = "STOP_SERVICE"
@@ -351,10 +462,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateServiceStatus() {
-        val toggleServiceButton = findViewById<Button>(R.id.toggleServiceButton)
-
-        if (bound && mappingService != null &&
-            permissionHelper.isAccessibilityServiceEnabled(MappingService::class.java.name)) {
+        if (permissionHelper.isAccessibilityServiceEnabled(MappingService::class.java.name)) {
             toggleServiceButton.setText(R.string.stop_service)
         } else {
             toggleServiceButton.setText(R.string.start_service)
@@ -380,7 +488,7 @@ class MainActivity : AppCompatActivity() {
         private var profiles: List<GameProfile>,
         private val onProfileAction: (GameProfile, ProfileAction) -> Unit
     ) : RecyclerView.Adapter<ProfileAdapter.ViewHolder>() {
-
+    
         inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
             val profileName: TextView = view.findViewById(R.id.profileName)
             val packageName: TextView = view.findViewById(R.id.packageName)
@@ -388,43 +496,42 @@ class MainActivity : AppCompatActivity() {
             val editButton: Button = view.findViewById(R.id.editButton)
             val deleteButton: Button = view.findViewById(R.id.deleteButton)
         }
-
+    
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
             val view = LayoutInflater.from(parent.context)
                 .inflate(R.layout.item_profile, parent, false)
             return ViewHolder(view)
         }
-
+    
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
             val profile = profiles[position]
-
+    
             holder.profileName.text = profile.name
             holder.packageName.text = if (profile.packageName.isNotEmpty()) {
                 profile.packageName
             } else {
                 getString(R.string.no_package_assigned)
             }
-
+    
             holder.activateButton.setOnClickListener {
                 onProfileAction(profile, ProfileAction.ACTIVATE)
             }
-
+    
             holder.editButton.setOnClickListener {
                 onProfileAction(profile, ProfileAction.EDIT)
             }
-
+    
             holder.deleteButton.setOnClickListener {
                 onProfileAction(profile, ProfileAction.DELETE)
             }
         }
-
+    
         override fun getItemCount() = profiles.size
-
+    
         fun getProfiles(): List<GameProfile> = profiles
-
+    
         fun updateProfiles(newProfiles: List<GameProfile>) {
             profiles = newProfiles
         }
     }
 }
-

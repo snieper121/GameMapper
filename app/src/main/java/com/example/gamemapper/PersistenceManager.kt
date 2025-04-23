@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Менеджер для сохранения и загрузки данных приложения
@@ -16,12 +17,27 @@ object PersistenceManager {
 
     private lateinit var prefs: SharedPreferences
     private val gson = Gson()
+    private val initialized = AtomicBoolean(false)
 
     /**
      * Инициализация менеджера
      */
+    @Synchronized
     fun init(context: Context) {
+        if (initialized.get()) return
         prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        initialized.set(true)
+        Log.d(TAG, "PersistenceManager initialized")
+    }
+    
+    /**
+     * Проверка инициализации
+     */
+    private fun checkInitialization() {
+        if (!initialized.get()) {
+            Log.e(TAG, "PersistenceManager не был инициализирован")
+            throw IllegalStateException("PersistenceManager должен быть инициализирован перед использованием")
+        }
     }
 
     /**
@@ -29,6 +45,7 @@ object PersistenceManager {
      */
     fun saveProfiles(profiles: List<GameProfile>) {
         try {
+            checkInitialization()
             val json = gson.toJson(profiles)
             prefs.edit().putString(PROFILES_KEY, json).apply()
             Log.d(TAG, "Profiles saved successfully")
@@ -42,6 +59,7 @@ object PersistenceManager {
      */
     fun loadProfiles(): List<GameProfile> {
         try {
+            checkInitialization()
             val json = prefs.getString(PROFILES_KEY, null)
             if (json != null) {
                 val type = object : TypeToken<List<GameProfile>>() {}.type

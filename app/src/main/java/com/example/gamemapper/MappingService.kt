@@ -5,10 +5,10 @@ import android.accessibilityservice.AccessibilityServiceInfo
 import android.app.Notification
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.hardware.input.InputManager
-import android.os.Binder
 import android.os.Build
-import android.os.IBinder
+import android.os.SystemClock
 import android.util.Log
 import android.view.InputDevice
 import android.view.KeyEvent
@@ -28,6 +28,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE
 
 /**
  * Сервис для обработки событий ввода и отображения оверлеев
@@ -46,37 +48,39 @@ class MappingService : AccessibilityService(), InputManager.InputDeviceListener 
     private var currentProfile: GameProfile? = null
     private var isServiceActive = false
 
+    // Защита от дребезга кнопок
+    private val lastKeyPressTime = mutableMapOf<Int, Long>()
+    private val KEY_DEBOUNCE_TIME_MS = 100L // 100 мс для защиты от дребезга
+    
+    // Публичное свойство для доступа к маппингам
+    val keyMappings: MutableMap<Int, Pair<Float, Float>>
+        get() = currentProfile?.keyMappings ?: mutableMapOf()
+
     // Корутины
-    val scope = CoroutineScope(Dispatchers.Main + Job())
-
-    // Binder для привязки активности к сервису
-    private val binder = LocalBinder()
-
-    inner class LocalBinder : Binder() {
-        fun getService(): MappingService = this@MappingService
-    }
+    val scope = CoroutineScope(Dispatchers.Default + Job())
 
     companion object {
         private const val TAG = "MappingService"
         private const val NOTIFICATION_ID = 1
     }
 
-    override fun onBind(intent: Intent): IBinder {
-        return binder
-    }
-
     override fun onServiceConnected() {
         try {
             // Инициализация зависимостей
-            profileRepository = AppModule.getProfileRepository()
-            mappingRepository = AppModule.getMappingRepository()
-            settingsRepository = AppModule.getSettingsRepository()
-
-            overlayManager = AppModule.getMemoryOptimizedOverlayManager()
-            inputEventHandler = AppModule.getInputEventHandler()
-            externalDeviceDetector = AppModule.getExternalDeviceDetector()
-            notificationHelper = AppModule.getNotificationHelper()
-
+            try {
+                profileRepository = AppModule.getProfileRepository()
+                mappingRepository = AppModule.getMappingRepository()
+                settingsRepository = AppModule.getSettingsRepository()
+    
+                overlayManager = AppModule.getMemoryOptimizedOverlayManager()
+                inputEventHandler = AppModule.getInputEventHandler()
+                externalDeviceDetector = AppModule.getExternalDeviceDetector()
+                notificationHelper = AppModule.getNotificationHelper()
+            } catch (e: Exception) {
+                Log.e(TAG, "Ошибка при инициализации зависимостей: ${e.message}", e)
+                throw e
+            }
+    
             // Настройка сервиса доступности
             val info = AccessibilityServiceInfo().apply {
                 eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or
@@ -87,42 +91,80 @@ class MappingService : AccessibilityService(), InputManager.InputDeviceListener 
                 notificationTimeout = 100
             }
             serviceInfo = info
-
+    
             // Регистрируем слушатель подключения/отключения устройств
             externalDeviceDetector.registerInputDeviceListener(this)
-
+    
             // Создаем канал уведомлений
             notificationHelper.createNotificationChannel()
-
+    
             // Запускаем сервис в режиме переднего плана
-            startForeground(NOTIFICATION_ID, notificationHelper.createServiceNotification())
-
+            val notification = notificationHelper.createServiceNotification()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                // Android 10+ (API 29)
+                startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+            } else {
+                // Более старые версии Android
+                startForeground(NOTIFICATION_ID, notification)
+            }
+    
+            // Загружаем маппинги из репозитория
+            val initialMappings = mappingRepository.getKeyMappings()
+            overlayManager.setMappings(initialMappings)
+    
             // Загружаем последний активный профиль
             loadLastActiveProfile()
-
+    
             isServiceActive = true
-            Log.i(TAG, "Service connected successfully")
-
+            Log.i(TAG, getString(R.string.log_service_connected))
+    
             // Уведомляем пользователя
             AppModule.getFeedbackHelper().showToast(getString(R.string.service_started))
-
+    
+            // Запускаем периодическую проверку изменений маппингов
+            startMappingSync()
+    
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to connect service: ${e.message}", e)
+            Log.e(TAG, "Ошибка при запуске сервиса: ${e.message}", e)
             AppModule.getErrorHandler().handleError(
                 e,
                 getString(R.string.service_start_error)
             )
         }
     }
-
+    
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == "STOP_SERVICE") {
-            stopSelf()
-        } else if (intent?.action == "LOAD_PROFILE") {
-            val profileId = intent.getStringExtra("profile_id")
-            profileId?.let { loadProfile(it) }
+        when (intent?.action) {
+            "STOP_SERVICE" -> {
+                stopSelf()
+            }
+            "LOAD_PROFILE" -> {
+                val profileId = intent.getStringExtra("profile_id")
+                profileId?.let { loadProfile(it) }
+            }
+            "UPDATE_MAPPINGS" -> {
+                val mappings = intent.getSerializableExtra("mappings") as? HashMap<Int, Pair<Float, Float>>
+                mappings?.let { updateKeyMappings(it) }
+            }
         }
         return START_STICKY
+    }
+
+    /**
+     * Периодически проверяет изменения в маппингах через репозиторий
+     */
+    private fun startMappingSync() {
+        scope.launch {
+            while (isServiceActive) {
+                val repoMappings = mappingRepository.getKeyMappings()
+                val currentMappings = currentProfile?.keyMappings ?: mutableMapOf()
+                if (repoMappings != currentMappings) {
+                    updateKeyMappings(repoMappings)
+                    Log.d(TAG, "Mappings updated from repository")
+                }
+                delay(1000) // Проверяем каждую секунду
+            }
+        }
     }
 
     /**
@@ -146,6 +188,9 @@ class MappingService : AccessibilityService(), InputManager.InputDeviceListener 
             // Обновляем маппинги из профиля
             overlayManager.setMappings(profile.keyMappings)
 
+            // Сохраняем маппинги в репозиторий
+            mappingRepository.updateKeyMappings(profile.keyMappings)
+
             // Уведомляем пользователя
             AppModule.getFeedbackHelper().showToast(
                 getString(R.string.profile_loaded, profile.name)
@@ -164,27 +209,36 @@ class MappingService : AccessibilityService(), InputManager.InputDeviceListener 
             profile.keyMappings.clear()
             profile.keyMappings.putAll(mappings)
             profileRepository.saveProfile(profile)
+            // Сохраняем маппинги в репозиторий
+            mappingRepository.updateKeyMappings(mappings)
         }
     }
 
     override fun onInterrupt() {
-        Log.i(TAG, "Service interrupted")
+        Log.i(TAG, getString(R.string.log_service_interrupted))
     }
 
     override fun onDestroy() {
         super.onDestroy()
 
-        // Удаляем все оверлеи
-        overlayManager.clearAll()
+        try {
+            // Отменяем регистрацию слушателя устройств
+            externalDeviceDetector.unregisterInputDeviceListener(this)
 
-        // Отменяем регистрацию слушателя устройств
-        externalDeviceDetector.unregisterInputDeviceListener(this)
+            // Деактивируем оверлей менеджер
+            overlayManager.setActive(false)
+            
+            // Удаляем все оверлеи
+            overlayManager.clearAll()
 
-        // Отменяем все корутины
-        scope.cancel()
+            // Отменяем все корутины и освобождаем ресурсы
+            scope.cancel()
 
-        isServiceActive = false
-        Log.i(TAG, "Service destroyed")
+            isServiceActive = false
+            Log.i(TAG, getString(R.string.log_service_destroyed))
+        } catch (e: Exception) {
+            Log.e(TAG, "Ошибка при уничтожении сервиса: ${e.message}", e)
+        }
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
@@ -192,31 +246,58 @@ class MappingService : AccessibilityService(), InputManager.InputDeviceListener 
     }
 
     override fun onKeyEvent(event: KeyEvent): Boolean {
-        // Обрабатываем только события от внешних устройств (геймпад, клавиатура)
-        if (event.source and InputDevice.SOURCE_GAMEPAD == InputDevice.SOURCE_GAMEPAD ||
-            event.source and InputDevice.SOURCE_KEYBOARD == InputDevice.SOURCE_KEYBOARD) {
+        try {
+            // Проверка на null и активность сервиса
+            if (event == null || !isServiceActive) return false
+            
+            // Обрабатываем только события от внешних устройств (геймпад, клавиатура)
+            if (event.source and InputDevice.SOURCE_GAMEPAD == InputDevice.SOURCE_GAMEPAD ||
+                event.source and InputDevice.SOURCE_KEYBOARD == InputDevice.SOURCE_KEYBOARD) {
 
-            // Проверяем, что это не виртуальная клавиатура
-            val device = event.device
-            if (device != null && device.keyboardType == InputDevice.KEYBOARD_TYPE_VIRTUAL) {
-                return false
-            }
+                val keyCode = event.keyCode
 
-            val keyCode = event.keyCode
+                // Если есть маппинг для этой кнопки, обрабатываем его
+                if (currentProfile?.keyMappings?.containsKey(keyCode) == true) {
+                    if (event.action == KeyEvent.ACTION_DOWN) {
+                        // Проверяем время с последнего нажатия этой кнопки
+                        val currentTime = SystemClock.elapsedRealtime()
+                        val lastTime = lastKeyPressTime[keyCode] ?: 0L
+                        
+                        // Если прошло достаточно времени с последнего нажатия
+                        if (currentTime - lastTime > KEY_DEBOUNCE_TIME_MS) {
+                            try {
+                                // Запоминаем время нажатия
+                                lastKeyPressTime[keyCode] = currentTime
+                                
+                                // Используем корутину для операций IO
+                                scope.launch(Dispatchers.IO) {
+                                    // Инжектируем нажатие клавиши
+                                    inputEventHandler.injectKeyPress(keyCode)
 
-            // Если есть маппинг для этой кнопки, обрабатываем его
-            if (currentProfile?.keyMappings?.containsKey(keyCode) == true) {
-                if (event.action == KeyEvent.ACTION_DOWN) {
-                    // Инжектируем нажатие клавиши
-                    inputEventHandler.injectKeyPress(keyCode)
-
-                    // Вибрация для обратной связи
-                    AppModule.getFeedbackHelper().vibrate(50)
+                                    // Вибрация для обратной связи
+                                    withContext(Dispatchers.Main) {
+                                        if (isServiceActive) {
+                                            AppModule.getFeedbackHelper().vibrate(50)
+                                        }
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                Log.e(TAG, getString(R.string.log_error_key_event, e.message), e)
+                            }
+                        } else {
+                            // Игнорируем слишком частые нажатия (дребезг)
+                            if (BuildConfig.DEBUG) {
+                                Log.d(TAG, getString(R.string.log_ignoring_key, keyCode))
+                            }
+                        }
+                    }
+                    
+                    // Возвращаем true, чтобы указать, что событие обработано
+                    return true
                 }
-
-                // Возвращаем true, чтобы указать, что событие обработано
-                return true
             }
+        } catch (e: Exception) {
+            Log.e(TAG, getString(R.string.log_error_key_event, e.message), e)
         }
 
         // Возвращаем false для необработанных событий
@@ -224,21 +305,22 @@ class MappingService : AccessibilityService(), InputManager.InputDeviceListener 
     }
 
     /**
-     * Блокируем события сенсорного экрана, чтобы приложение работало только
-     * с внешними устройствами (клавиатура, мышь)
+     * Обрабатывает события касания экрана
      */
-    override fun onTouchEvent(event: MotionEvent): Boolean {
-        // Определяем источник события
+    fun handleTouchEvent(event: MotionEvent): Boolean {
+        // Получаем источник события
         val source = event.source
-
-        // Пропускаем события от мыши, но блокируем от сенсорного экрана
-        if (source and InputDevice.SOURCE_TOUCHSCREEN == InputDevice.SOURCE_TOUCHSCREEN) {
-            // Блокируем события сенсорного экрана
-            return true
+        
+        // Проверяем настройки: должны ли мы блокировать сенсорный экран
+        val shouldBlockTouchscreen = settingsRepository.isBlockTouchEventsEnabled()
+        
+        // Если настройка включена и событие от сенсорного экрана - блокируем
+        if (shouldBlockTouchscreen && 
+            source and InputDevice.SOURCE_TOUCHSCREEN == InputDevice.SOURCE_TOUCHSCREEN) {
+            return true // Блокируем событие
         }
-
-        // Для событий от мыши и других устройств возвращаем false,
-        // чтобы они обрабатывались стандартным образом
+        
+        // В остальных случаях пропускаем событие
         return false
     }
 
@@ -246,17 +328,23 @@ class MappingService : AccessibilityService(), InputManager.InputDeviceListener 
      * Обработка подключения нового устройства ввода
      */
     override fun onInputDeviceAdded(deviceId: Int) {
-        val device = InputDevice.getDevice(deviceId)
-        Log.d(TAG, "Input device added: ${device.name}, id: $deviceId")
+        try {
+            val device = InputDevice.getDevice(deviceId) ?: return
+            Log.d(TAG, getString(R.string.log_device_added, device.name, deviceId))
 
-        // Проверяем, что это внешнее устройство
-        if (device.sources and (InputDevice.SOURCE_GAMEPAD or InputDevice.SOURCE_KEYBOARD or InputDevice.SOURCE_MOUSE) != 0) {
-            // Уведомляем пользователя
-            scope.launch {
-                AppModule.getFeedbackHelper().showToast(
-                    getString(R.string.device_connected, device.name)
-                )
+            // Проверяем, что это внешнее устройство
+            if (device.sources and (InputDevice.SOURCE_GAMEPAD or InputDevice.SOURCE_KEYBOARD or InputDevice.SOURCE_MOUSE) != 0) {
+                // Уведомляем пользователя
+                scope.launch(kotlinx.coroutines.CoroutineExceptionHandler { _, e ->
+                    Log.e(TAG, getString(R.string.log_error_notification, e.message), e)
+                }) {
+                    AppModule.getFeedbackHelper().showToast(
+                        getString(R.string.device_connected, device.name)
+                    )
+                }
             }
+        } catch (e: Exception) {
+            Log.e(TAG, getString(R.string.log_error_processing_device, e.message), e)
         }
     }
 
@@ -264,13 +352,19 @@ class MappingService : AccessibilityService(), InputManager.InputDeviceListener 
      * Обработка отключения устройства ввода
      */
     override fun onInputDeviceRemoved(deviceId: Int) {
-        Log.d(TAG, "Input device removed: id: $deviceId")
+        try {
+            Log.d(TAG, getString(R.string.log_device_removed, deviceId))
 
-        // Уведомляем пользователя
-        scope.launch {
-            AppModule.getFeedbackHelper().showToast(
-                getString(R.string.device_disconnected)
-            )
+            // Уведомляем пользователя
+            scope.launch(kotlinx.coroutines.CoroutineExceptionHandler { _, e ->
+                Log.e(TAG, getString(R.string.log_error_notification, e.message), e)
+            }) {
+                AppModule.getFeedbackHelper().showToast(
+                    getString(R.string.device_disconnected)
+                )
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, getString(R.string.log_error_processing_device, e.message), e)
         }
     }
 
@@ -278,7 +372,17 @@ class MappingService : AccessibilityService(), InputManager.InputDeviceListener 
      * Обработка изменения устройства ввода
      */
     override fun onInputDeviceChanged(deviceId: Int) {
-        val device = InputDevice.getDevice(deviceId)
-        Log.d(TAG, "Input device changed: ${device.name}, id: $deviceId")
+        try {
+            val device = InputDevice.getDevice(deviceId) ?: return
+            Log.d(TAG, getString(R.string.log_device_changed, device.name, deviceId))
+        } catch (e: Exception) {
+            Log.e(TAG, getString(R.string.log_error_processing_device, e.message), e)
+        }
+    }
+
+    // Добавляем вспомогательный метод для проверки виртуальной клавиатуры
+    private fun InputDevice.isVirtual(): Boolean {
+        return this.supportsSource(InputDevice.SOURCE_KEYBOARD) && 
+               !this.isExternal
     }
 }
