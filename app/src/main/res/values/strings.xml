@@ -1,107 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">GameMapper+</string>
+    <string name="app_name">GameMapper</string>
+    <string name="accessibility_message">Сервис для связи между геймпадом и сенсорным экраном</string>
 
-    <!-- Основные строки -->
-    <string name="create_profile">Создать профиль</string>
-    <string name="edit_profile">Редактировать профиль</string>
-    <string name="delete_profile">Удалить профиль</string>
-    <string name="create">Создать</string>
-    <string name="save">Сохранить</string>
+    <!-- Общие строки -->
     <string name="cancel">Отмена</string>
-    <string name="delete">Удалить</string>
-    <string name="activate">Активировать</string>
-    <string name="edit">Редактировать</string>
-    <string name="start_service">Запустить сервис</string>
-    <string name="stop_service">Остановить сервис</string>
     <string name="ok">OK</string>
+    <string name="save">Сохранить</string>
+    <string name="delete">Удалить</string>
+    <string name="edit">Редактировать</string>
+    <string name="create">Создать</string>
 
     <!-- Профили -->
-    <string name="profile_name">Название профиля</string>
-    <string name="package_name">Пакет приложения</string>
-    <string name="enter_profile_name">Введите название профиля</string>
-    <string name="enter_package_name">Введите имя пакета (необязательно)</string>
-    <string name="confirm_delete">Подтверждение удаления</string>
-    <string name="confirm_delete_message">Вы уверены, что хотите удалить профиль "%1$s"?</string>
-    <string name="no_profiles">Нет профилей\nНажмите + чтобы создать</string>
-    <string name="profile_created">Профиль "%1$s" создан</string>
+    <string name="add_profile">Добавить профиль</string>
+    <string name="create_profile">Создать профиль</string>
+    <string name="edit_profile">Редактировать профиль</string>
+    <string name="no_profiles">Нет профилей</string>
+    <string name="profile_name_empty">Имя профиля не может быть пустым</string>
+    <string name="profile_created">Профиль %1$s создан</string>
     <string name="profile_updated">Профиль обновлен</string>
-    <string name="profile_deleted">Профиль "%1$s" удален</string>
-    <string name="profile_activated">Профиль "%1$s" активирован</string>
-    <string name="profile_name_empty">Название профиля не может быть пустым</string>
+    <string name="profile_deleted">Профиль %1$s удален</string>
+    <string name="profile_activated">Профиль %1$s активирован</string>
+    <string name="profile_loaded">Профиль %1$s загружен</string>
     <string name="no_package_assigned">Пакет не назначен</string>
-    <string name="profile_loaded">Профиль "%1$s" загружен</string>
+    <string name="confirm_delete">Подтвердите удаление</string>
+    <string name="confirm_delete_message">Вы уверены, что хотите удалить профиль %1$s?</string>
 
     <!-- Сервис -->
-    <string name="service_running">Сервис маппинга запущен</string>
-    <string name="service_not_running">Сервис не запущен</string>
-    <string name="service_not_running_message">Сервис маппинга не запущен. Хотите запустить его сейчас?</string>
-    <string name="service_started">Сервис маппинга запущен</string>
-    <string name="service_stopped">Сервис маппинга остановлен</string>
-    <string name="service_start_error">Ошибка при запуске сервиса</string>
-
-    <!-- Настройки -->
-    <string name="settings">Настройки</string>
-    <string name="settings_not_implemented">Настройки пока не реализованы</string>
+    <string name="activate">Активировать</string>
     <string name="edit_mapping">Редактировать маппинг</string>
-    <string name="gamepad_config">Настройка геймпада</string>
+    <string name="gamepad_config">Настройки геймпада</string>
+    <string name="start_service">Запустить сервис</string>
+    <string name="stop_service">Остановить сервис</string>
+    <string name="service_started">Сервис запущен</string>
+    <string name="service_stopped">Сервис остановлен</string>
+    <string name="service_not_running">Сервис не запущен</string>
+    <string name="service_not_running_message">Для использования профиля необходимо запустить сервис доступности</string>
+    <string name="service_start_error">Ошибка при запуске сервиса</string>
+    <string name="foreground_service_permission_required">Требуется разрешение для запуска сервиса на переднем плане</string>
 
-    <!-- Разрешения -->
-    <string name="accessibility_required">Требуется доступ к специальным возможностям</string>
-    <string name="accessibility_message">Для работы приложения необходимо разрешение на использование специальных возможностей. Пожалуйста, включите сервис GameMapper+ в настройках.</string>
-    <string name="overlay_permission_required">Требуется разрешение на наложение</string>
-    <string name="overlay_permission_message">Для отображения кнопок поверх других приложений необходимо разрешение на наложение. Пожалуйста, предоставьте это разрешение в настройках.</string>
-    <string name="open_settings">Открыть настройки</string>
+    <!-- Настройки и разрешения -->
+    <string name="settings">Настройки</string>
+    <string name="settings_not_implemented">Настройки еще не реализованы</string>
+    <string name="permission_required">Требуется разрешение</string>
 
-    <!-- Уведомления -->
-    <string name="notification_channel_name">Сервис GameMapper+</string>
-    <string name="notification_channel_description">Уведомления для сервиса маппинга кнопок</string>
-
-    <!-- Редактирование маппинга -->
-    <string name="add_button">Добавить кнопку</string>
-    <string name="new_mapping_added">Добавлен новый маппинг</string>
-    <string name="position_x">X:</string>
-    <string name="position_y">Y:</string>
-
-    <!-- Настройка геймпада -->
-    <string name="gamepad_config_instruction">Нажмите "Назначить кнопку", укажите позицию на экране и нажмите кнопку на геймпаде для назначения.</string>
-    <string name="assign_button">Назначить кнопку</string>
-    <string name="set_position">Укажите позицию</string>
-    <string name="press_gamepad_button">Нажмите кнопку на геймпаде</string>
-    <string name="button_assigned">Кнопка %1$s назначена</string>
-    <string name="invalid_position">Некорректная позиция</string>
-    <string name="no_gamepad_connected">Геймпад не подключен</string>
-
-    <!-- Внешние устройства -->
+    <!-- Устройства -->
     <string name="no_external_devices">Внешние устройства не обнаружены</string>
-    <string name="no_external_devices_message">Не обнаружено внешних устройств ввода (клавиатура, мышь, геймпад). Для работы приложения рекомендуется подключить внешнее устройство.</string>
-    <string name="device_connected">Устройство %1$s подключено</string>
-    <string name="device_disconnected">Устройство отключено</string>
+    <string name="no_external_devices_message">Не обнаружены подключенные клавиатура, мышь или геймпад. Подключите устройство для полноценной работы приложения.</string>
 
-    <!-- Настройки кнопок -->
-    <string name="button_settings">Настройки кнопки</string>
-    <string name="button_shape">Форма кнопки</string>
-    <string name="shape_circle">Круг</string>
-    <string name="shape_square">Квадрат</string>
-    <string name="shape_rounded">Закругленный</string>
-    <string name="shape_triangle">Треугольник</string>
-    <string name="shape_diamond">Ромб</string>
-    <string name="button_color">Цвет кнопки</string>
-    <string name="select_color">Выбрать цвет</string>
+    <!-- Логи -->
+    <string name="log_restored_state">Восстановлено состояние: %1$s</string>
+    <string name="log_saved_state">Сохранено состояние: %1$s</string>
+    <string name="log_config_changed">Изменена конфигурация, ориентация: %1$d</string>
+    <string name="log_service_connected">Сервис успешно подключен</string>
+    <string name="log_service_interrupted">Сервис прерван</string>
+    <string name="log_service_destroyed">Сервис уничтожен</string>
+    <string name="config_update_error">Ошибка при обновлении конфигурации: %1$s</string>
+    
+    <!-- кнопки -->
+    <string name="add_key_mapping">Добавить привязку клавиш</string>
+    <string name="gamepad_config_instruction">Инструкция по настройке геймпада</string>
+    <string name="assign_button">Назначить кнопку</string>
+    <string name="preview">Предпросмотр</string>
     <string name="button_size">Размер кнопки</string>
-    <string name="button_transparency">Прозрачность</string>
-
-    <!-- Цвета -->
-    <string name="add_key_mapping">Add Key Mapping</string>
-    <string name="add_profile">Add Profile</string>
-    <string name="color_white">Белый</string>
-    <string name="color_red">Красный</string>
-    <string name="color_green">Зеленый</string>
-    <string name="color_blue">Синий</string>
-    <string name="color_yellow">Желтый</string>
-    <string name="color_magenta">Пурпурный</string>
-    <string name="color_cyan">Голубой</string>
-    <string name="color_black">Черный</string>
-
-    <!-- Ошибки -->
+    <string name="button_opacity">Прозрачность кнопки</string>
+    <string name="button_text">Текст кнопки</string>
+    <string name="button_text_hint">Введите текст кнопки</string>
+    <string name="button_shape">Форма кнопки</string>
+    <string name="button_color">Цвет кнопки</string>
+    <string name="button_border">Граница кнопки</string>
+    <string name="button_shadow">Тень кнопки</string>
+    <string name="button_gradient">Градиент кнопки</string>
+    <string name="apply">Применить</string>
+    <string name="profile_name">Имя профиля</string>
+    <string name="enter_profile_name">Введите имя профиля</string>
+    <string name="package_name">Имя пакета</string>
+    <string name="enter_package_name">Введите имя пакета</string>
+    
+    <!-- Мэппинг -->
+    <string name="new_mapping_added">Добавлено новое сопоставление</string>
+    <string name="no_gamepad_connected">Геймпад не подключен</string>
+    <string name="set_position">Задать положение</string>
+    <string name="press_gamepad_button">Нажмите кнопку на геймпаде</string>
+    <string name="invalid_position">Неверное положение</string>
+    <string name="button_assigned">Кнопка назначена</string>
+    <string name="log_error_key_event">Ошибка события клавиши</string>
+    <string name="log_ignoring_key">Игнорирование клавиши</string>
+    <string name="log_device_added">Устройство добавлено</string>
+    <string name="log_error_notification">Ошибка уведомления</string>
+    <string name="device_connected">Устройство подключено</string>
+    <string name="log_error_processing_device">Ошибка обработки устройства</string>
+    <string name="log_device_removed">Устройство удалено</string>
+    <string name="device_disconnected">Устройство отключено</string>
+    <string name="log_device_changed">Устройство изменено</string>
     <string name="error_occurred">Произошла ошибка</string>
+    <string name="notification_channel_name">Канал уведомлений GameMapper</string>
+    <string name="notification_channel_description">Уведомления для приложения GameMapper</string>
+    <string name="service_running">Сервис запущен</string>
+    <string name="overlay_permission_required">Требуется разрешение на наложение</string>
+    <string name="overlay_permission_message">Приложению требуется разрешение на наложение</string>
+    <string name="open_settings">Открыть настройки</string>
+    <string name="accessibility_required">Требуется доступность</string>
+    <string name="notification_permission_required">Требуется разрешение на уведомления</string>
+    <string name="notification_permission_message">Приложению требуется разрешение на уведомления</string>
+    <string name="grant">Предоставить</string>
+    
 </resources>
