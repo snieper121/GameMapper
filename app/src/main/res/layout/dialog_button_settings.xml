@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView 
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
 
@@ -9,138 +11,195 @@
         android:orientation="vertical"
         android:padding="16dp">
 
+        <!-- Предпросмотр кнопки -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/button_shape"
-            android:textSize="16sp"
-            android:textStyle="bold" />
+            android:text="@string/preview"
+            android:textStyle="bold"
+            android:textSize="16sp" />
 
-        <RadioGroup
-            android:id="@+id/shapeRadioGroup"
+        <FrameLayout
+            android:id="@+id/previewContainer"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp">
-
-            <RadioButton
-                android:id="@+id/shapeCircle"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/shape_circle" />
-
-            <RadioButton
-                android:id="@+id/shapeSquare"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/shape_square" />
-
-            <RadioButton
-                android:id="@+id/shapeRounded"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/shape_rounded" />
-
-            <RadioButton
-                android:id="@+id/shapeTriangle"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/shape_triangle" />
-
-            <RadioButton
-                android:id="@+id/shapeDiamond"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/shape_diamond" />
-        </RadioGroup>
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="@string/button_color"
-            android:textSize="16sp"
-            android:textStyle="bold" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="150dp"
             android:layout_marginTop="8dp"
-            android:orientation="horizontal">
+            android:background="#F5F5F5"
+            android:gravity="center" />
 
-            <View
-                android:id="@+id/colorPreview"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:background="@color/transparent_white" />
-
-            <Button
-                android:id="@+id/selectColorButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:text="@string/select_color" />
-        </LinearLayout>
-
+        <!-- Размер кнопки -->
         <TextView
+            android:id="@+id/sizeLabel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:text="@string/button_size"
-            android:textSize="16sp"
-            android:textStyle="bold" />
+            android:textStyle="bold"
+            android:textSize="16sp" />
 
-        <LinearLayout
+        <SeekBar
+            android:id="@+id/sizeSeekBar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:orientation="horizontal">
+            android:max="200"
+            android:progress="70" />
 
-            <SeekBar
-                android:id="@+id/sizeSeekBar"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:max="200"
-                android:progress="100" />
-
-            <TextView
-                android:id="@+id/sizeValueText"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:text="100"
-                android:textSize="16sp" />
-        </LinearLayout>
-
+        <!-- Прозрачность кнопки -->
         <TextView
+            android:id="@+id/opacityLabel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="@string/button_transparency"
-            android:textSize="16sp"
-            android:textStyle="bold" />
+            android:text="@string/button_opacity"
+            android:textStyle="bold"
+            android:textSize="16sp" />
 
-        <LinearLayout
+        <SeekBar
+            android:id="@+id/opacitySeekBar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:orientation="horizontal">
+            android:max="255"
+            android:progress="180" />
 
-            <SeekBar
-                android:id="@+id/transparencySeekBar"
+        <!-- Текст кнопки -->
+        <TextView
+            android:id="@+id/textLabel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="@string/button_text"
+            android:textStyle="bold"
+            android:textSize="16sp" />
+
+        <EditText
+            android:id="@+id/buttonTextField"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:hint="@string/button_text_hint"
+            android:maxLength="5"
+            android:singleLine="true"
+            android:inputType="text" />
+
+        <!-- Форма кнопки -->
+        <TextView
+            android:id="@+id/shapeLabel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="@string/button_shape"
+            android:textStyle="bold"
+            android:textSize="16sp" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/shapeRecyclerView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:clipToPadding="false"
+            android:orientation="horizontal" />
+
+        <!-- Цвет кнопки -->
+        <TextView
+            android:id="@+id/colorLabel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="@string/button_color"
+            android:textStyle="bold"
+            android:textSize="16sp" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/colorRecyclerView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:clipToPadding="false"
+            android:orientation="horizontal" />
+
+        <!-- Ширина границы -->
+        <TextView
+            android:id="@+id/borderLabel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="@string/button_border"
+            android:textStyle="bold"
+            android:textSize="16sp" />
+
+        <SeekBar
+            android:id="@+id/borderWidthSeekBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:max="10"
+            android:progress="2" />
+
+        <!-- Тень кнопки -->
+        <TextView
+            android:id="@+id/shadowLabel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="@string/button_shadow"
+            android:textStyle="bold"
+            android:textSize="16sp" />
+
+        <SeekBar
+            android:id="@+id/shadowSeekBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:max="20"
+            android:progress="4" />
+
+        <!-- Градиент -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/gradientLabel"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:max="255"
-                android:progress="128" />
+                android:text="@string/button_gradient"
+                android:textStyle="bold"
+                android:textSize="16sp" />
 
-            <TextView
-                android:id="@+id/transparencyValueText"
+            <Switch
+                android:id="@+id/gradientSwitch"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checked="true" />
+        </LinearLayout>
+
+        <!-- Кнопки действий -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:orientation="horizontal"
+            android:gravity="end">
+
+            <Button
+                android:id="@+id/cancelButton"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/cancel" />
+
+            <Button
+                android:id="@+id/applyButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
-                android:text="50%"
-                android:textSize="16sp" />
+                android:text="@string/apply" />
         </LinearLayout>
     </LinearLayout>
-</ScrollView>
+</androidx.core.widget.NestedScrollView>
