@@ -2,4 +2,14 @@
 <resources>
     <!-- Фильтр для USB устройств (клавиатуры, мыши, геймпады) -->
     <usb-device class="0x03" /> <!-- HID (Human Interface Device) -->
+    
+    <!-- Конкретные типы геймпадов -->
+    <usb-device vendor-id="1118" product-id="736" /> <!-- Microsoft Xbox 360 Controller -->
+    <usb-device vendor-id="1118" product-id="746" /> <!-- Microsoft Xbox One Controller -->
+    <usb-device vendor-id="1356" product-id="616" /> <!-- Sony PS3 Controller -->
+    <usb-device vendor-id="1356" product-id="1476" /> <!-- Sony PS4 Controller -->
+    <usb-device vendor-id="1356" product-id="3302" /> <!-- Sony PS5 Controller -->
+    
+    <!-- Bluetooth HID (для беспроводных устройств) -->
+    <usb-device class="224" subclass="1" protocol="1" /> <!-- Bluetooth HID -->
 </resources>
