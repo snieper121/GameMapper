@@ -3,10 +3,16 @@ package com.example.gamemapper.helpers
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
 import com.example.gamemapper.R
 
 /**
@@ -46,6 +52,35 @@ class PermissionHelper(private val context: Context) {
     }
 
     /**
+     * Проверяет разрешение на отправку уведомлений
+     */
+    fun hasNotificationPermission(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+        } else {
+            true // Для Android версий до 13 разрешение не требуется
+        }
+    }
+
+    /**
+     * Запрашивает разрешение на отправку уведомлений
+     */
+    fun requestNotificationPermission(activity: FragmentActivity) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (!hasNotificationPermission()) {
+                ActivityCompat.requestPermissions(
+                    activity,
+                    arrayOf(android.Manifest.permission.POST_NOTIFICATIONS),
+                    NOTIFICATION_PERMISSION_REQUEST_CODE
+                )
+            }
+        }
+    }
+
+    /**
      * Показывает диалог с запросом разрешения на наложение поверх других приложений
      */
     fun showOverlayPermissionDialog(activity: Activity) {
@@ -78,5 +113,25 @@ class PermissionHelper(private val context: Context) {
             .setNegativeButton(R.string.cancel, null)
             .setCancelable(false)
             .show()
+    }
+
+    /**
+     * Показывает диалог с объяснением, зачем нужно разрешение на уведомления
+     */
+    fun showNotificationPermissionDialog(activity: Activity) {
+        AlertDialog.Builder(activity)
+            .setTitle(R.string.notification_permission_required)
+            .setMessage(R.string.notification_permission_message)
+            .setPositiveButton(R.string.grant) { _, _ ->
+                if (activity is FragmentActivity) {
+                    requestNotificationPermission(activity)
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+    
+    companion object {
+        const val NOTIFICATION_PERMISSION_REQUEST_CODE = 123
     }
 }

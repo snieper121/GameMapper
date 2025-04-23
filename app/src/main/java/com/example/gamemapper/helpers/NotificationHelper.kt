@@ -6,8 +6,11 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
+import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import com.example.gamemapper.MainActivity
 import com.example.gamemapper.MappingService
 import com.example.gamemapper.R
@@ -24,6 +27,21 @@ class NotificationHelper(private val context: Context) {
 
     private val notificationManager: NotificationManager by lazy {
         context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    }
+
+    /**
+     * Проверяет, есть ли разрешение на показ уведомлений
+     */
+    fun hasNotificationPermission(): Boolean {
+        // На Android 13+ требуется явное разрешение
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ActivityCompat.checkSelfPermission(
+                context, 
+                android.Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+        } else {
+            true // До Android 13 разрешение не требуется
+        }
     }
 
     /**
@@ -53,17 +71,13 @@ class NotificationHelper(private val context: Context) {
 
         val stopPendingIntent = PendingIntent.getService(
             context, 0, stopIntent,
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-                PendingIntent.FLAG_IMMUTABLE
-            else 0
+            PendingIntent.FLAG_IMMUTABLE
         )
 
         val settingsIntent = Intent(context, MainActivity::class.java)
         val settingsPendingIntent = PendingIntent.getActivity(
             context, 0, settingsIntent,
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-                PendingIntent.FLAG_IMMUTABLE
-            else 0
+            PendingIntent.FLAG_IMMUTABLE
         )
 
         return NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID)
@@ -84,7 +98,10 @@ class NotificationHelper(private val context: Context) {
      * Показывает уведомление
      */
     fun showNotification(id: Int, notification: Notification) {
-        notificationManager.notify(id, notification)
+        // Проверяем разрешение на Android 13+
+        if (hasNotificationPermission()) {
+            NotificationManagerCompat.from(context).notify(id, notification)
+        }
     }
 
     /**

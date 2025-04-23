@@ -20,10 +20,17 @@ class ExternalDeviceDetector(private val context: Context) {
     fun isKeyboardConnected(): Boolean {
         val devices = InputDevice.getDeviceIds()
         return devices.any { deviceId ->
-            val device = InputDevice.getDevice(deviceId)
+            val device = InputDevice.getDevice(deviceId) ?: return@any false
             device.sources and InputDevice.SOURCE_KEYBOARD == InputDevice.SOURCE_KEYBOARD &&
-                    device.keyboardType != InputDevice.KEYBOARD_TYPE_VIRTUAL
+                    !isVirtualKeyboard(device)
         }
+    }
+
+    /**
+     * Проверяет, является ли клавиатура виртуальной
+     */
+    private fun isVirtualKeyboard(device: InputDevice): Boolean {
+        return device.supportsSource(InputDevice.SOURCE_KEYBOARD) && !device.isExternal
     }
 
     /**
@@ -32,7 +39,7 @@ class ExternalDeviceDetector(private val context: Context) {
     fun isMouseConnected(): Boolean {
         val devices = InputDevice.getDeviceIds()
         return devices.any { deviceId ->
-            val device = InputDevice.getDevice(deviceId)
+            val device = InputDevice.getDevice(deviceId) ?: return@any false
             device.sources and InputDevice.SOURCE_MOUSE == InputDevice.SOURCE_MOUSE
         }
     }
@@ -43,7 +50,7 @@ class ExternalDeviceDetector(private val context: Context) {
     fun isGamepadConnected(): Boolean {
         val devices = InputDevice.getDeviceIds()
         return devices.any { deviceId ->
-            val device = InputDevice.getDevice(deviceId)
+            val device = InputDevice.getDevice(deviceId) ?: return@any false
             device.sources and InputDevice.SOURCE_GAMEPAD == InputDevice.SOURCE_GAMEPAD
         }
     }
@@ -51,12 +58,14 @@ class ExternalDeviceDetector(private val context: Context) {
     /**
      * Получает список подключенных геймпадов
      */
-    fun getConnectedGamepads(): List<InputDevice> {
+     fun getConnectedGamepads(): List<InputDevice> {
         val devices = InputDevice.getDeviceIds()
         return devices
-            .map { InputDevice.getDevice(it) }
+            .asSequence()  // преобразуем в последовательность
+            .mapNotNull { deviceId -> InputDevice.getDevice(deviceId) }
             .filter { it.sources and InputDevice.SOURCE_GAMEPAD == InputDevice.SOURCE_GAMEPAD }
-    }
+            .toList()
+}
 
     /**
      * Получает информацию о подключенных устройствах ввода
@@ -66,12 +75,12 @@ class ExternalDeviceDetector(private val context: Context) {
         val info = StringBuilder()
 
         devices.forEach { deviceId ->
-            val device = InputDevice.getDevice(deviceId)
+            val device = InputDevice.getDevice(deviceId) ?: return@forEach
             info.append("Device: ${device.name}\n")
             info.append("  ID: $deviceId\n")
             info.append("  Sources: ${getSourcesDescription(device.sources)}\n")
             if (device.sources and InputDevice.SOURCE_KEYBOARD == InputDevice.SOURCE_KEYBOARD) {
-                info.append("  Keyboard Type: ${getKeyboardTypeDescription(device.keyboardType)}\n")
+                info.append("  Keyboard Type: ${getKeyboardTypeDescription(device)}\n")
             }
             info.append("\n")
         }
@@ -104,13 +113,10 @@ class ExternalDeviceDetector(private val context: Context) {
         return sourceList.joinToString(", ")
     }
 
-    private fun getKeyboardTypeDescription(type: Int): String {
-        return when (type) {
-            InputDevice.KEYBOARD_TYPE_ALPHABETIC -> "Alphabetic"
-            InputDevice.KEYBOARD_TYPE_NONE -> "None"
-            InputDevice.KEYBOARD_TYPE_NON_ALPHABETIC -> "Non-Alphabetic"
-            InputDevice.KEYBOARD_TYPE_VIRTUAL -> "Virtual"
-            else -> "Unknown"
+    private fun getKeyboardTypeDescription(device: InputDevice): String {
+        return when {
+            device.supportsSource(InputDevice.SOURCE_KEYBOARD) && !device.isExternal -> "Virtual"
+            else -> "Physical"
         }
     }
 
