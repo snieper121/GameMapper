@@ -1,2 +1,28 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        google()
+        mavenCentral()
+        jcenter() {
+            content {
+                includeModule("org.jetbrains.trove4j", "trove4j")
+            }
+        }
+    }
+}
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
+    repositories {
+        google()
+        mavenCentral()
+        jcenter() {
+            content {
+                includeModule("org.jetbrains.trove4j", "trove4j")
+            }
+        }
+    }
+}
+
 rootProject.name = "GameMapper"
 include ':app'
