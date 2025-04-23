@@ -1,5 +1,7 @@
 package com.example.gamemapper.repository.interfaces
 
+import com.example.gamemapper.ButtonSettingsDialog.ButtonSettings
+
 /**
  * Интерфейс для работы с настройками приложения
  */
@@ -73,6 +75,21 @@ interface ISettingsRepository {
      * Установить режим только внешних устройств
      */
     fun setExternalDevicesOnly(enabled: Boolean)
+
+    /**
+     * Получить настройки кнопки для указанного keyCode
+     */
+    fun getButtonSettings(keyCode: Int): ButtonSettings
+
+    /**
+     * Сохранить настройки кнопки для указанного keyCode
+     */
+    fun saveButtonSettings(keyCode: Int, settings: ButtonSettings)
+
+    /**
+     * Удалить настройки кнопки для указанного keyCode
+     */
+    fun deleteButtonSettings(keyCode: Int)
 
     /**
      * Очистить все настройки
